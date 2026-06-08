@@ -5,7 +5,9 @@
 
 An interactive early-voting turnout intelligence dashboard for the Lakeside City Council 2026 Runoff Election. The dashboard visualizes turnout patterns across 12 active precincts, with demographic breakdowns by gender, age group, and party affiliation, plus a daily voting pace trend and county-level comparison.
 
-**Live Dashboard → [Open `lakeside_map.html`](lakeside_map.html)** *(no server required — fully self-contained)*
+## 🌐 Live Interactive Dashboard
+
+👉 **[Open Dashboard](https://yeasirzawad.github.io/Precinctsmart-Assessment/lakeside_map.html)**
 
 ---
 

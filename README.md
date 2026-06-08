@@ -33,8 +33,8 @@ An interactive early-voting turnout intelligence dashboard for the Lakeside City
 ## Project Structure
 
 ```
-├── lakeside_map.html          # Interactive dashboard (main deliverable)
-├── precincts.geojson          # Precinct boundary polygons (WGS84)
+├── lakeside_map.html         
+├── precincts.geojson          
 ├── Notebook/
 │   └── lakeside_analysis.ipynb  # Full analysis notebook
 ├── Data/

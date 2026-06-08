@@ -412,6 +412,11 @@ function setLayer(t){
 }
 renderMap();
 setTimeout(()=>leafmap.invalidateSize(),120);
+setTimeout(()=>{
+  geoL.eachLayer(lyr=>{
+    if(lyr.feature.properties.pctkey==='880030')lyr.fire('click');
+  });
+},200);
 
 /* CHARTS */
 Chart.defaults.font.family="'Segoe UI',system-ui,sans-serif";

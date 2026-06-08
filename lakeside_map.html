@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakeside City Council · 2026 Runoff — Turnout Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{
+  --gd:#0B4D3E;--gm:#0D5C4A;--gl:#C7E9E0;--gs:#EDF7F4;
+  --or:#E07B39;--ol:#FEF0E6;
+  --re:#C0392B;--rl:#FDECEA;
+  --bg:#F5F6F8;--cd:#FFFFFF;--br:#E5E7EB;
+  --t1:#111827;--t2:#374151;--t3:#6B7280;--t4:#9CA3AF;
+  --sh:0 1px 4px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --r8:8px;--r5:5px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--t1);display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+/* ── HEADER ──────────────────────────── */
+#hdr{height:6vh;min-height:42px;background:linear-gradient(135deg,#0B4D3E,#0F6B55);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 20px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.1);}
+#hdr-center{text-align:center;}
+#hdr h1{color:#fff;font-size:clamp(.82rem,1.28vw,1.18rem);font-weight:800;letter-spacing:-.02em;}
+.hsub{color:var(--gl);font-size:clamp(.5rem,.7vw,.66rem);margin-top:1px;}
+#hdr-right{display:flex;justify-content:flex-end;align-items:center;gap:18px;}
+.hstat{text-align:right;}
+.hstat-v{display:block;color:#fff;font-size:clamp(.78rem,1.1vw,.98rem);font-weight:800;line-height:1.1;}
+.hstat-l{display:block;color:var(--gl);font-size:clamp(.44rem,.55vw,.56rem);margin-top:1px;opacity:.85;}
+.hstat-v.or{color:var(--or);}
+.hdivider{width:1px;height:24px;background:rgba(255,255,255,.2);}
+
+/* ── KPI ─────────────────────────────── */
+#kpi{height:12vh;min-height:68px;display:flex;gap:8px;padding:7px 14px;background:var(--cd);border-bottom:1px solid var(--br);flex-shrink:0;}
+.kc{flex:1;background:var(--bg);border-radius:var(--r8);padding:9px 14px;display:flex;flex-direction:column;justify-content:center;box-shadow:var(--sh);border-left:4px solid var(--br);}
+.kc.t1{background:var(--gs);border-left-color:var(--gm);}
+.kc.t2{border-left-color:#1A8C6F;}
+.kc.or{background:var(--ol);border-left-color:var(--or);}
+.kc.re{background:var(--rl);border-left-color:var(--re);}
+.kv{font-size:clamp(.96rem,1.52vw,1.38rem);font-weight:800;color:var(--t1);line-height:1;}
+.kc.t1 .kv{color:var(--gm);}.kc.or .kv{color:var(--or);}.kc.re .kv{color:var(--re);}
+.kl{font-size:clamp(.5rem,.62vw,.62rem);color:var(--t3);margin-top:4px;line-height:1.35;}
+.kbg{display:inline-flex;align-items:center;background:var(--gm);color:#fff;font-size:.62em;font-weight:700;border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:middle;}
+.kbg.g2{background:#1A8C6F;}
+
+/* ── MAIN ────────────────────────────── */
+#main{flex:1;display:flex;min-height:0;overflow:hidden;}
+
+/* ── LEFT ────────────────────────────── */
+#ldata{width:22vw;min-width:192px;background:var(--cd);border-right:1px solid var(--br);display:flex;flex-direction:column;padding:10px 12px;gap:8px;overflow:hidden;flex-shrink:0;}
+.sec{font-size:clamp(.46rem,.54vw,.54rem);font-weight:700;letter-spacing:.1em;color:var(--t4);text-transform:uppercase;}
+.dcard{background:var(--bg);border-radius:var(--r8);border:1px solid var(--br);padding:9px 11px;display:flex;flex-direction:column;}
+.dcard.f1{flex:1;min-height:0;}
+.dh{font-size:clamp(.57rem,.67vw,.67rem);font-weight:700;color:var(--t1);margin-bottom:6px;flex-shrink:0;line-height:1.3;}
+.dh em{font-weight:400;color:var(--t3);font-style:normal;font-size:.9em;}
+.cw{position:relative;flex:1;min-height:0;}
+.cw canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important;}
+
+/* gender */
+#gwrap{display:flex;align-items:center;gap:12px;}
+#gdnt{width:82px;height:82px;position:relative;flex-shrink:0;}
+#gdnt canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important;}
+.gstats{flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center;}
+.gsr{display:flex;align-items:center;gap:7px;}
+.gdot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.gnm{font-size:.68rem;color:var(--t3);width:50px;flex-shrink:0;}
+.gpct{font-size:.82rem;font-weight:800;color:var(--t1);}
+
+/* party chart */
+#pcw{position:relative;height:60px;}
+#pcw canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important;}
+
+/* ── MIDDLE MAP ──────────────────────── */
+#midmap{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+#mctrl{display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid var(--br);flex-shrink:0;background:var(--cd);}
+.tog{display:flex;border:1.5px solid var(--gm);border-radius:var(--r5);overflow:hidden;flex-shrink:0;}
+.tb{padding:4px 9px;line-height:1.2;font-size:clamp(.5rem,.58vw,.58rem);font-weight:600;cursor:pointer;background:#fff;color:var(--gm);border:none;transition:background .15s,color .15s;white-space:nowrap;}
+.tb.on{background:var(--gm);color:#fff;}
+.tb:not(.on):hover{background:var(--gs);}
+.mleg{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
+.mleg-lbl{font-size:.52rem;font-weight:700;letter-spacing:.08em;color:var(--t4);text-transform:uppercase;flex-shrink:0;}
+.lramp{flex:1;height:7px;background:linear-gradient(to right,#C7E9E0,#4DB8A0,#0D5C4A);border-radius:3px;}
+.lv{font-size:.54rem;color:var(--t4);flex-shrink:0;white-space:nowrap;}
+#map{flex:1;min-height:0;}
+.leaflet-tooltip{font-size:.73rem!important;font-weight:600;border:none!important;border-radius:6px!important;box-shadow:0 2px 10px rgba(0,0,0,.14)!important;padding:5px 10px!important;}
+
+/* precinct detail */
+#det{flex:0 0 auto;border-top:1px solid var(--br);padding:12px 16px;overflow:hidden;background:var(--cd);min-height:120px;max-height:156px;}
+.det-hdr{font-size:.54rem;font-weight:700;letter-spacing:.1em;color:var(--t4);text-transform:uppercase;margin-bottom:8px;}
+.dn{font-size:clamp(.82rem,.96vw,.96rem);font-weight:800;color:var(--gm);margin-bottom:8px;letter-spacing:-.01em;}
+.dr{display:flex;justify-content:space-between;align-items:center;font-size:clamp(.66rem,.78vw,.78rem);padding:4px 0;border-bottom:1px solid #EEF0F3;}
+.dr:last-child{border-bottom:none;}
+.dl{color:var(--t2);font-weight:500;}
+.dv{font-weight:700;font-size:clamp(.68rem,.8vw,.8rem);}
+.dv.hi{color:var(--gm);}.dv.lo{color:var(--re);}
+.ph{font-size:.68rem;color:var(--t4);text-align:center;padding:22px 0;font-style:italic;line-height:1.7;}
+
+/* ── RIGHT ───────────────────────────── */
+#rtrend{width:30vw;min-width:218px;background:var(--cd);border-left:1px solid var(--br);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
+
+/* trend section */
+#twrap{flex:0 0 65%;display:flex;flex-direction:column;padding:12px 14px 8px;gap:6px;min-height:0;border-bottom:1px solid var(--br);}
+.ttitle{font-size:clamp(.8rem,.98vw,.94rem);font-weight:800;color:var(--t1);line-height:1.2;margin-top:2px;}
+.tsub{display:flex;gap:12px;flex-wrap:wrap;margin-top:5px;}
+.tleg{display:flex;align-items:center;gap:5px;font-size:.59rem;color:var(--t3);}
+.tsw{display:inline-block;width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.tlsw{display:inline-block;width:14px;height:2.5px;border-radius:2px;flex-shrink:0;vertical-align:middle;}
+#tc{flex:1;position:relative;min-height:0;}
+#tc canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important;}
+
+/* county comparison section */
+#rwrap{flex:1;min-height:0;padding:10px 14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;}
+.cty-block{display:flex;flex-direction:column;gap:5px;}
+.cty-row{display:flex;align-items:center;gap:8px;}
+.cty-name{font-size:.65rem;font-weight:700;color:var(--t2);width:68px;flex-shrink:0;}
+.cty-track{flex:1;height:7px;background:#EAECF0;border-radius:4px;position:relative;overflow:visible;}
+.cty-fill{height:100%;border-radius:4px;}
+.cty-avg-mark{position:absolute;top:-4px;bottom:-4px;width:1.5px;left:76.3%;background:rgba(224,123,57,.85);}
+.cty-pct{font-size:.68rem;font-weight:800;width:36px;text-align:right;flex-shrink:0;}
+.cty-sub{font-size:.57rem;color:var(--t4);margin-left:76px;}
+
+.meth-block{display:flex;flex-direction:column;gap:5px;}
+.meth-row{display:flex;align-items:center;gap:8px;}
+.meth-name{font-size:.65rem;font-weight:700;color:var(--t2);width:68px;flex-shrink:0;}
+.meth-track{flex:1;height:7px;background:#EAECF0;border-radius:4px;}
+.meth-fill{height:100%;border-radius:4px;}
+.meth-right{display:flex;flex-direction:column;align-items:flex-end;width:58px;flex-shrink:0;}
+.meth-pct{font-size:.68rem;font-weight:800;color:var(--t1);}
+.meth-cnt{font-size:.56rem;color:var(--t4);}
+
+.divider-line{height:1px;background:var(--br);margin:2px 0;}
+
+/* ── FOOTER ──────────────────────────── */
+#ftr{height:3vh;min-height:18px;background:var(--bg);border-top:1px solid var(--br);display:flex;align-items:center;justify-content:center;padding:0 20px;flex-shrink:0;font-size:clamp(.46rem,.56vw,.56rem);color:var(--t4);font-style:italic;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div></div>
+  <div id="hdr-center">
+    <h1>Lakeside City Council &middot; 2026 Runoff Election</h1>
+    <div class="hsub">Early Voting Turnout Intelligence &middot; Through June 4, 2026 &middot; 12 Active Precincts</div>
+  </div>
+  <div id="hdr-right">
+    <div class="hstat">
+      <span class="hstat-v">7.63%</span>
+      <span class="hstat-l">City Runoff Turnout</span>
+    </div>
+    <div class="hdivider"></div>
+    <div class="hstat">
+      <span class="hstat-v or">&#8595;&thinsp;76.4%</span>
+      <span class="hstat-l">Drop vs. May First Round</span>
+    </div>
+  </div>
+</div>
+
+<!-- KPI -->
+<div id="kpi">
+  <div class="kc">
+    <div class="kv">3,615</div>
+    <div class="kl">Registered Voters &middot; Total Universe</div>
+  </div>
+  <div class="kc t1">
+    <div class="kv">1,169 <span class="kbg">32.3%</span></div>
+    <div class="kl">Voted in May First Round</div>
+  </div>
+  <div class="kc t2">
+    <div class="kv">276 <span class="kbg g2">7.63%</span></div>
+    <div class="kl">Voted Runoff &mdash; early thru Jun 4</div>
+  </div>
+  <div class="kc or">
+    <div class="kv">&#8593;&thinsp;181</div>
+    <div class="kl">New Runoff Voters &mdash; skipped May ballot</div>
+  </div>
+  <div class="kc re">
+    <div class="kv">1,074</div>
+    <div class="kl">Left on the Table &mdash; voted May, not back yet</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT: DEMOGRAPHICS -->
+  <div id="ldata">
+
+    <!-- Gender -->
+    <div class="dcard" style="flex:0 0 auto;">
+      <div class="dh">Gender Split <em>&mdash; Male 8.25% &gt; Female 7.59%</em></div>
+      <div id="gwrap">
+        <div id="gdnt"><canvas id="c-g"></canvas></div>
+        <div class="gstats">
+          <div class="gsr"><div class="gdot" style="background:#0D5C4A"></div><span class="gnm">Male</span><span class="gpct">43.8%</span></div>
+          <div class="gsr"><div class="gdot" style="background:#E91E63"></div><span class="gnm">Female</span><span class="gpct">38.7%</span></div>
+          <div class="gsr"><div class="gdot" style="background:#9CA3AF"></div><span class="gnm">Unknown</span><span class="gpct">16.6%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Party -->
+    <div class="dcard" style="flex:0 0 auto;">
+      <div class="dh">Top Party Turnout <em>&mdash; dashed line = city avg</em></div>
+      <div id="pcw"><canvas id="c-party"></canvas></div>
+    </div>
+
+    <!-- Age -->
+    <div class="dcard f1">
+      <div class="dh">Turnout by Age Group <em>&mdash; 70&ndash;79 leads at 9.0%</em></div>
+      <div class="cw"><canvas id="c-age"></canvas></div>
+    </div>
+
+  </div>
+
+  <!-- MIDDLE: MAP -->
+  <div id="midmap">
+    <div id="mctrl">
+      <div class="tog">
+        <button class="tb on" id="btn-t" onclick="setLayer('total')">Runoff %</button>
+        <button class="tb"    id="btn-r" onclick="setLayer('relative')">÷ May</button>
+      </div>
+      <div class="mleg">
+        <span class="mleg-lbl">Scale</span>
+        <div class="lramp"></div>
+        <span id="lmin" class="lv"></span>
+        <span style="color:var(--t4);margin:0 3px;font-size:.52rem">&ndash;</span>
+        <span id="lmax" class="lv"></span>
+      </div>
+    </div>
+    <div id="map"></div>
+    <div id="det">
+      <div class="det-hdr">Selected Precinct</div>
+      <div class="ph">Click any precinct on the map</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: TREND + RANKINGS -->
+  <div id="rtrend">
+
+    <!-- Votes by Day (smaller, top 55%) -->
+    <div id="twrap">
+      <div>
+        <div class="sec">Daily Voting Pace</div>
+        <div class="ttitle">Votes by Day</div>
+        <div class="tsub">
+          <div class="tleg"><span class="tsw" style="background:#0D5C4A"></span>In-Person</div>
+          <div class="tleg"><span class="tsw" style="background:#E07B39"></span>Mail-in</div>
+          <div class="tleg"><span class="tlsw" style="background:#1A8C6F"></span>Cumulative %</div>
+        </div>
+      </div>
+      <div id="tc"><canvas id="c-trend"></canvas></div>
+    </div>
+
+    <!-- County + Vote Method (bottom 45%) -->
+    <div id="rwrap">
+
+      <!-- County Comparison -->
+      <div class="sec">County Comparison &middot; orange mark = city avg 7.63%</div>
+      <div class="cty-block">
+        <!-- Northgate: 148 votes / 1801 reg = 8.22% → bar width 8.22/10 = 82.2% -->
+        <div class="cty-row">
+          <span class="cty-name">Northgate</span>
+          <div class="cty-track">
+            <div class="cty-fill" style="width:82.2%;background:#0D5C4A;border-radius:4px;"></div>
+            <div class="cty-avg-mark"></div>
+          </div>
+          <span class="cty-pct" style="color:var(--gm);">8.22%</span>
+        </div>
+        <div class="cty-sub">148 votes &nbsp;&middot;&nbsp; 1,801 registered</div>
+        <!-- Southfield: 128 votes / 1492 reg = 8.58% → bar width 8.58/10 = 85.8% -->
+        <div class="cty-row" style="margin-top:4px;">
+          <span class="cty-name">Southfield</span>
+          <div class="cty-track">
+            <div class="cty-fill" style="width:85.8%;background:#1A8C6F;border-radius:4px;"></div>
+            <div class="cty-avg-mark"></div>
+          </div>
+          <span class="cty-pct" style="color:#1A8C6F;">8.58%</span>
+        </div>
+        <div class="cty-sub">128 votes &nbsp;&middot;&nbsp; 1,492 registered</div>
+      </div>
+
+      <div class="divider-line"></div>
+
+      <!-- Vote Method -->
+      <div class="sec">Vote Method &middot; 276 total runoff voters</div>
+      <div class="meth-block">
+        <!-- In-Person: 220/276 = 79.7% → bar 79.7% of track -->
+        <div class="meth-row">
+          <span class="meth-name">In-Person</span>
+          <div class="meth-track">
+            <div class="meth-fill" style="width:79.7%;background:#0D5C4A;border-radius:4px;"></div>
+          </div>
+          <div class="meth-right">
+            <span class="meth-pct">79.7%</span>
+            <span class="meth-cnt">220 votes</span>
+          </div>
+        </div>
+        <!-- Mail-in: 56/276 = 20.3% → bar 20.3% of track -->
+        <div class="meth-row">
+          <span class="meth-name">Mail-in</span>
+          <div class="meth-track">
+            <div class="meth-fill" style="width:20.3%;background:#E07B39;border-radius:4px;"></div>
+          </div>
+          <div class="meth-right">
+            <span class="meth-pct">20.3%</span>
+            <span class="meth-cnt">56 votes</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div id="ftr">
+  Precincts 253 (Northgate) &amp; 264 (Southfield) excluded — no boundary geometry &nbsp;|&nbsp; 322 registered voters &amp; 33 runoff voters affected &nbsp;|&nbsp; Data through June 4, 2026 &nbsp;|&nbsp; PrecinctSmart Analytics
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+
+const PD={
+  "700010":{reg:421,runoff:34,first:126,rpct:8.08,fpct:29.93,ratio:27.0},
+  "700020":{reg:308,runoff:20,first:114,rpct:6.49,fpct:37.01,ratio:17.5},
+  "700030":{reg:379,runoff:25,first:104,rpct:6.60,fpct:27.44,ratio:24.0},
+  "700045":{reg:325,runoff:22,first:112,rpct:6.77,fpct:34.46,ratio:19.6},
+  "700110":{reg:241,runoff:18,first:84, rpct:7.47,fpct:34.85,ratio:21.4},
+  "700220":{reg:127,runoff:8, first:45, rpct:6.30,fpct:35.43,ratio:17.8},
+  "880015":{reg:426,runoff:34,first:143,rpct:7.98,fpct:33.57,ratio:23.8},
+  "880030":{reg:262,runoff:24,first:82, rpct:9.16,fpct:31.30,ratio:29.3},
+  "880075":{reg:134,runoff:11,first:44, rpct:8.21,fpct:32.84,ratio:25.0},
+  "880120":{reg:133,runoff:12,first:55, rpct:9.02,fpct:41.35,ratio:21.8},
+  "880130":{reg:261,runoff:20,first:77, rpct:7.66,fpct:29.50,ratio:26.0},
+  "880210":{reg:276,runoff:15,first:87, rpct:5.43,fpct:31.52,ratio:17.2}
+};
+
+const GEOJSON={"type":"FeatureCollection","features":[
+  {"type":"Feature","properties":{"pctkey":"700010"},"geometry":{"type":"Polygon","coordinates":[[[-96.92,33.02],[-96.89,33.02],[-96.89,33.050000000000004],[-96.92,33.050000000000004],[-96.92,33.02]]]}},
+  {"type":"Feature","properties":{"pctkey":"700020"},"geometry":{"type":"Polygon","coordinates":[[[-96.89,33.02],[-96.86,33.02],[-96.86,33.050000000000004],[-96.89,33.050000000000004],[-96.89,33.02]]]}},
+  {"type":"Feature","properties":{"pctkey":"700030"},"geometry":{"type":"Polygon","coordinates":[[[-96.86,33.02],[-96.83,33.02],[-96.83,33.050000000000004],[-96.86,33.050000000000004],[-96.86,33.02]]]}},
+  {"type":"Feature","properties":{"pctkey":"700045"},"geometry":{"type":"Polygon","coordinates":[[[-96.83,33.02],[-96.8,33.02],[-96.8,33.050000000000004],[-96.83,33.050000000000004],[-96.83,33.02]]]}},
+  {"type":"Feature","properties":{"pctkey":"700110"},"geometry":{"type":"Polygon","coordinates":[[[-96.92,33.050000000000004],[-96.89,33.050000000000004],[-96.89,33.080000000000005],[-96.92,33.080000000000005],[-96.92,33.050000000000004]]]}},
+  {"type":"Feature","properties":{"pctkey":"700220"},"geometry":{"type":"Polygon","coordinates":[[[-96.89,33.050000000000004],[-96.86,33.050000000000004],[-96.86,33.080000000000005],[-96.89,33.080000000000005],[-96.89,33.050000000000004]]]}},
+  {"type":"Feature","properties":{"pctkey":"880015"},"geometry":{"type":"Polygon","coordinates":[[[-96.86,33.050000000000004],[-96.83,33.050000000000004],[-96.83,33.080000000000005],[-96.86,33.080000000000005],[-96.86,33.050000000000004]]]}},
+  {"type":"Feature","properties":{"pctkey":"880030"},"geometry":{"type":"Polygon","coordinates":[[[-96.83,33.050000000000004],[-96.8,33.050000000000004],[-96.8,33.080000000000005],[-96.83,33.080000000000005],[-96.83,33.050000000000004]]]}},
+  {"type":"Feature","properties":{"pctkey":"880075"},"geometry":{"type":"Polygon","coordinates":[[[-96.92,33.080000000000005],[-96.89,33.080000000000005],[-96.89,33.11000000000001],[-96.92,33.11000000000001],[-96.92,33.080000000000005]]]}},
+  {"type":"Feature","properties":{"pctkey":"880120"},"geometry":{"type":"Polygon","coordinates":[[[-96.89,33.080000000000005],[-96.86,33.080000000000005],[-96.86,33.11000000000001],[-96.89,33.11000000000001],[-96.89,33.080000000000005]]]}},
+  {"type":"Feature","properties":{"pctkey":"880130"},"geometry":{"type":"Polygon","coordinates":[[[-96.86,33.080000000000005],[-96.83,33.080000000000005],[-96.83,33.11000000000001],[-96.86,33.11000000000001],[-96.86,33.080000000000005]]]}},
+  {"type":"Feature","properties":{"pctkey":"880210"},"geometry":{"type":"Polygon","coordinates":[[[-96.83,33.080000000000005],[-96.8,33.080000000000005],[-96.8,33.11000000000001],[-96.83,33.11000000000001],[-96.83,33.080000000000005]]]}}
+]};
+
+/* MAP */
+const CITY_AVG=7.63;
+const leafmap=L.map("map",{zoomControl:true});
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"&copy; CARTO",maxZoom:18}).addTo(leafmap);
+
+function lerp(a,b,t){return a+(b-a)*t;}
+function mkColor(val,min,max){
+  if(val==null)return"#DEDEDE";
+  const t=Math.max(0,Math.min(1,(val-min)/(max-min||1)));
+  const r=t<.5?lerp(0xC7,0x4D,t*2):lerp(0x4D,0x0D,(t-.5)*2);
+  const g=t<.5?lerp(0xE9,0xB8,t*2):lerp(0xB8,0x5C,(t-.5)*2);
+  const b=t<.5?lerp(0xE0,0xA0,t*2):lerp(0xA0,0x4A,(t-.5)*2);
+  return"rgb("+Math.round(r)+","+Math.round(g)+","+Math.round(b)+")";
+}
+let curLyr="total",geoL=null,selL=null;
+function getVal(k){const d=PD[k];return d?(curLyr==="total"?d.rpct:d.ratio):null;}
+function getRange(){const vs=Object.keys(PD).map(k=>getVal(k)).filter(v=>v!=null);return{min:Math.min(...vs),max:Math.max(...vs)};}
+function updateLeg(){
+  const{min,max}=getRange();
+  document.getElementById("lmin").textContent=min.toFixed(1)+"%";
+  document.getElementById("lmax").textContent=max.toFixed(1)+"%";
+}
+function styleFn(f){const{min,max}=getRange();return{fillColor:mkColor(getVal(f.properties.pctkey),min,max),weight:1.5,color:"white",fillOpacity:.88};}
+function mkDr(l,v,c){return`<div class="dr"><span class="dl">${l}</span><span class="dv ${c||''}">${v}</span></div>`;}
+function onEach(f,lyr){
+  const k=f.properties.pctkey,d=PD[k];if(!d)return;
+  lyr.bindTooltip(`<b>Precinct ${k}</b><br>Runoff: ${d.rpct}% &nbsp;|&nbsp; vs May: ${d.ratio}%`,{sticky:true});
+  lyr.on("click",function(){
+    if(selL)geoL.resetStyle(selL);
+    selL=lyr;lyr.setStyle({weight:3,color:"#E07B39",fillOpacity:.95});lyr.bringToFront();
+    const above=d.rpct>=CITY_AVG,diff=(d.rpct-CITY_AVG).toFixed(2);
+    document.getElementById("det").innerHTML=
+      `<div class="det-hdr">Selected Precinct</div>`+
+      `<div class="dn">Precinct ${k}</div>`+
+      mkDr("Registered",d.reg.toLocaleString())+
+      mkDr("First Round",d.first+" ("+d.fpct+"%)")+
+      mkDr("Runoff Voters",d.runoff.toLocaleString())+
+      mkDr("Runoff Turnout",d.rpct+"%",above?"hi":"lo")+
+      mkDr("vs City Avg",(above?"+":"")+diff+"%",above?"hi":"lo")+
+      mkDr("Runoff ÷ May",d.ratio+"%");
+  });
+  lyr.on("mouseover",function(){if(lyr!==selL)lyr.setStyle({weight:2.5,color:"#555"});});
+  lyr.on("mouseout", function(){if(lyr!==selL)geoL.resetStyle(lyr);});
+}
+function renderMap(){
+  if(geoL)geoL.remove();selL=null;updateLeg();
+  geoL=L.geoJSON(GEOJSON,{style:styleFn,onEachFeature:onEach}).addTo(leafmap);
+  leafmap.fitBounds(geoL.getBounds(),{padding:[14,14]});
+}
+function setLayer(t){
+  curLyr=t;
+  document.getElementById("btn-t").classList.toggle("on",t==="total");
+  document.getElementById("btn-r").classList.toggle("on",t==="relative");
+  renderMap();
+}
+renderMap();
+setTimeout(()=>leafmap.invalidateSize(),120);
+
+/* CHARTS */
+Chart.defaults.font.family="'Segoe UI',system-ui,sans-serif";
+const avgLine={type:'line',xMin:CITY_AVG,xMax:CITY_AVG,borderColor:'rgba(224,123,57,.75)',borderWidth:1.5,borderDash:[5,4]};
+
+/* Gender donut */
+const ctp={id:'ctp',afterDraw(chart){
+  if(chart.canvas.id!=='c-g')return;
+  const{ctx,chartArea:{width,height,left,top}}=chart;
+  const cx=left+width/2,cy=top+height/2;
+  ctx.save();
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#111827';ctx.font='bold 15px "Segoe UI",sans-serif';
+  ctx.fillText('233',cx,cy-6);
+  ctx.fillStyle='#9CA3AF';ctx.font='9px "Segoe UI",sans-serif';
+  ctx.fillText('voters',cx,cy+9);
+  ctx.restore();
+}};
+new Chart(document.getElementById("c-g"),{
+  type:'doughnut',plugins:[ctp],
+  data:{labels:['Male','Female','Unknown'],datasets:[{data:[103,91,39],backgroundColor:['#0D5C4A','#E91E63','#9CA3AF'],borderWidth:2.5,borderColor:'#F5F6F8',hoverOffset:4}]},
+  options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${((ctx.parsed/233)*100).toFixed(1)}%)`}},annotation:{annotations:{}},datalabels:{display:false}}}
+});
+
+/* Party top-3 */
+new Chart(document.getElementById("c-party"),{
+  type:'bar',plugins:[ChartDataLabels],
+  data:{labels:['GRN','LIB','REP'],datasets:[{data:[10.19,9.00,8.43],backgroundColor:['#388E3CCC','#D4A017CC','#D32F2FCC'],borderColor:['#388E3C','#D4A017','#D32F2F'],borderWidth:1,borderRadius:3,maxBarThickness:15}]},
+  options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:false,clip:false,
+    layout:{padding:{right:40}},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw}% turnout`}},datalabels:{anchor:'end',align:'end',formatter:v=>v.toFixed(2)+'%',color:'#374151',font:{size:9,weight:'600'}},annotation:{annotations:{avgLine:{...avgLine}}}},
+    scales:{x:{display:false,max:13},y:{grid:{display:false},ticks:{font:{size:10,weight:'600'}},border:{display:false}}}
+  }
+});
+
+/* Age — 5 bins (merged from original 8) */
+const ageData={
+  labels:['Under 40','40–59','60–69','70–79','80+'],
+  vals:[7.17, 7.53, 7.36, 9.01, 7.68]
+};
+const maxAge=Math.max(...ageData.vals);
+new Chart(document.getElementById("c-age"),{
+  type:'bar',plugins:[ChartDataLabels],
+  data:{
+    labels:ageData.labels,
+    datasets:[{data:ageData.vals,backgroundColor:ageData.vals.map(v=>v===maxAge?'#E07B39':v>CITY_AVG?'#0D5C4A':'#C7E9E0'),borderColor:ageData.vals.map(v=>v===maxAge?'#C46020':v>CITY_AVG?'#0B4D3E':'#7ECFC3'),borderWidth:1,borderRadius:3,maxBarThickness:26}]
+  },
+  options:{
+    indexAxis:'y',responsive:true,maintainAspectRatio:false,clip:false,
+    layout:{padding:{right:36}},
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>` ${ctx.raw}% turnout`}},
+      datalabels:{anchor:'end',align:'end',formatter:v=>v.toFixed(2)+'%',color:ctx=>ageData.vals[ctx.dataIndex]===maxAge?'#C46020':'#374151',font:{size:9,weight:'600'}},
+      annotation:{annotations:{avgLine:{...avgLine}}}
+    },
+    scales:{x:{display:false,max:11.5},y:{grid:{display:false},ticks:{font:{size:10},color:'#374151'},border:{display:false}}}
+  }
+});
+
+/* Trend */
+const daily={labels:['Jun 01','Jun 02','Jun 03','Jun 04'],inperson:[48,52,66,54],mail:[21,35,0,0],cumul:[1.91,4.32,6.14,7.63]};
+const totals=daily.inperson.map((v,i)=>v+daily.mail[i]);
+const peakI=totals.indexOf(Math.max(...totals));
+new Chart(document.getElementById("c-trend"),{
+  data:{
+    labels:daily.labels,
+    datasets:[
+      {type:'bar',label:'In-Person',data:daily.inperson,yAxisID:'y',backgroundColor:daily.inperson.map((_,i)=>i===peakI?'#0A4A3A':'#0D5C4A'),borderColor:'white',borderWidth:1,borderRadius:{topLeft:3,topRight:3},stack:'votes',maxBarThickness:44},
+      {type:'bar',label:'Mail-in',  data:daily.mail,    yAxisID:'y',backgroundColor:daily.mail.map((_,i)=>i===peakI?'#C46020':'#E07B39'),    borderColor:'white',borderWidth:1,borderRadius:{topLeft:3,topRight:3},stack:'votes',maxBarThickness:44},
+      {type:'line',label:'Cumulative Turnout %',data:daily.cumul,yAxisID:'y2',borderColor:'#1A8C6F',backgroundColor:'rgba(26,140,111,.1)',fill:true,borderWidth:3,tension:.3,pointBackgroundColor:'white',pointBorderColor:'#1A8C6F',pointBorderWidth:2.5,pointRadius:6,pointHoverRadius:8}
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:true,position:'top',align:'end',labels:{font:{size:9.5},boxWidth:9,usePointStyle:true,padding:10}},
+      tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>ctx.dataset.type==='line'?` ${ctx.raw}% cumulative`:` ${ctx.raw} voters (${ctx.dataset.label})`}},
+      datalabels:{display:ctx=>ctx.dataset.type==='line',anchor:'top',align:'top',offset:4,formatter:v=>v.toFixed(2)+'%',color:'#0B4D3E',font:{size:9.5,weight:'700'}},
+      annotation:{annotations:{}}
+    },
+    scales:{
+      x:{stacked:true,grid:{display:false},ticks:{font:{size:10},color:'#374151'},border:{display:false}},
+      y:{stacked:true,grid:{color:'#F3F4F6'},ticks:{font:{size:9.5},color:'#6B7280'},border:{display:false},title:{display:true,text:'Votes',font:{size:9},color:'#9CA3AF'}},
+      y2:{position:'right',grid:{display:false},ticks:{font:{size:9.5,weight:'600'},color:'#1A8C6F',callback:v=>v+'%'},border:{display:false},title:{display:true,text:'Cumulative %',font:{size:9,weight:'700'},color:'#1A8C6F'}}
+    }
+  }
+});
+
+</script>
+</body>
+</html>
